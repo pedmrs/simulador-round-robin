@@ -121,7 +121,7 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
             // TO DO: 
             //      * Colocar evento em espera quando pede um evento de IO
             //      * Mover processos na fila de IO para fila de prontos 
-            //      * 
+            //      * Finalizar execução dos processos
 
             
             
