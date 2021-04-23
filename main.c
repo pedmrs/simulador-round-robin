@@ -56,9 +56,26 @@ void criar_processos(int quantidade_processos)
     }
 }
 
+Processo* seleciona_processo_para_execucao()
+{
+    if(!fila_vazia(fila_alta_prioridade))
+    {
+        return  desenfileira_processo(&fila_alta_prioridade);
+    } 
+    
+    if(!fila_vazia(fila_baixa_prioridade))
+    {
+        return desenfileira_processo(&fila_baixa_prioridade);
+    }
+
+    return NULL;
+}
+
 void round_robin(unsigned quantum, unsigned quantidade_processos)
 {
     int i = 0;
+    Processo* processo_executando = NULL;
+    unsigned  tempo_execucao_corrente = 0;
 
     inicia_fila(&fila_alta_prioridade, quantidade_processos);
     inicia_fila(&fila_baixa_prioridade, quantidade_processos);
@@ -69,7 +86,51 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
     // fila_io = (Processo *)malloc(sizeof(Processo) * quantidade_processos);
 
     while (1)
-    {
+    {      
+        printf("Instante t = %d", tempo_corrente);
+        
+        // No começo de cada "ciclo" conferimos se há um processo nas filas de pronto que pode ser executado
+        if(!processo_executando)
+        {
+            processo_executando = seleciona_processo_para_execucao();
+        }
+        // Caso o processo em execução já tenha esgotado seu time slice, seleciona um novo processo para execução
+        else if(tempo_execucao_corrente >= quantum)
+        {
+            processo_executando = seleciona_processo_para_execucao();
+        } 
+        else 
+        {
+            tempo_execucao_corrente++;
+        }
+
+        while(i < quantidade_processos)
+        {   
+            Processo processo_itr = lista_processos[i];
+            
+
+            // Todos os processos são iniciados com alta prioridade
+            if(processo_itr.inicio == tempo_corrente)
+            {
+                enfileira_processo(&processo_itr, &fila_alta_prioridade);
+            } 
+
+
+
+            
+            
+
+
+
+            i++;
+        
+        }
+        
+
+
+        i = 0;
+        tempo_corrente++;
+    }
     //     while (i < quantidade_processos)
     //     {
     //         if (lista_processos[i].prioridade > 1)
@@ -114,9 +175,9 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
     //         i++;
     //     }
     //     i = 0;
-    }
+        
+    
 }
-
 void imprime_tabela_processos(int qtd)
 {
     printf("--------------------------------------------------------------------------------\n");
