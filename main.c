@@ -4,7 +4,8 @@
 
 #define MAX_PROCESSOS 10 // número máximo de processos
 #define MAX_INICIO 20    // limite máximo para inicio de processo
-#define MAX_DURACAO 30   // limite máximo para duração de processo
+#define MAX_DURACAO 29   // limite máximo para duração de processo
+#define MAX_DURACAO_IO 14 // limite máximo para duração de operação de I/O
 
 typedef struct
 {
@@ -48,24 +49,31 @@ void criar_processos(int quantidade_processos)
         if (rand() % 2 == 0)
         { // atribui aleatoriamente se processo é IO ou não
             lista_processos[i].io.tipo = tipo_io[rand() % 3];
+            lista_processos[i].io.inicio = rand() % MAX_INICIO;
+            lista_processos[i].io.duracao = (rand() % MAX_DURACAO_IO) + 1;
+
         }
         else
         {
             lista_processos[i].io.tipo = '\0';
+            lista_processos[i].io.inicio = 0;
+            lista_processos[i].io.duracao = 0;
+
         }
 
         // TO DO: Atribuir duração aleatoria para operações de IO de cada processo
 
         // Determina de maneira aleatória o instante de início e duração total de cada processo
         lista_processos[i].inicio = rand() % MAX_INICIO;
-        lista_processos[i].duracao_restante = rand() % MAX_DURACAO;
+        lista_processos[i].duracao_restante = (rand() % MAX_DURACAO) + 1;
 
         lista_processos[i].prioridade = 1; // define prioridade alta para todos os novos processos
 
-        if (lista_processos[i].io.tipo == 'F' || lista_processos[i].io.tipo == 'I')
-        {
-            lista_processos[i].prioridade += 1; // aumenta a prioridade
-        }
+    //     Prioridade dos processos muda apenas quando ele retorna da operação de IO
+    //     if (lista_processos[i].io.tipo == 'F' || lista_processos[i].io.tipo == 'I')
+    //     {
+    //         lista_processos[i].prioridade += 1; // aumenta a prioridade
+    //     }
     }
 }
 
@@ -81,7 +89,7 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
     {
         while (i < quantidade_processos)
         {
-            if (lista_processos[i].prioridade > 0)
+            if (lista_processos[i].prioridade > 1)
             {
                 fila_alta_prioridade[i] = lista_processos[i];
                 if (lista_processos[i].io.tipo != '\0')
@@ -128,23 +136,22 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
 
 void imprime_tabela_processos(int qtd)
 {
-    printf("-------------------------------------------------------\n");
-    printf("| PID | Prioridade | Tempo de Início | Duração |  IO  |\n");
-    printf("-------------------------------------------------------\n");
+    printf("--------------------------------------------------------------------------------\n");
+    printf("| PID | Prioridade | Tempo de Inicio | Duraçao |  IO  | Inicio IO | Duracao IO |\n");
+    printf("--------------------------------------------------------------------------------\n");
     int i = 0;
     for(i = 0; i < qtd; i++){
         Processo processo_atual = lista_processos[i];
-        printf("|  %d  |      %d     |        %d        |    %d    |   %c  |\n", 
-                processo_atual.pid, processo_atual.prioridade, processo_atual.inicio, processo_atual.duracao_restante, processo_atual.io.tipo);
-        printf("-------------------------------------------------------\n");
-
+        printf("|  %d  |      %d     |        %d        |    %d    |   %c  |     %d     |    %d     |\n", 
+                processo_atual.pid, processo_atual.prioridade, processo_atual.inicio, processo_atual.duracao_restante, processo_atual.io.tipo, processo_atual.io.inicio, processo_atual.io.duracao);
+        printf("--------------------------------------------------------------------------------\n");
     }
 }
 
-/*  -------------------------------------------------------
-    | PID | Prioridade | Tempo de Início | Duração |  IO  |
-    -------------------------------------------------------
-    |  1  |      0     |        0        |    5    |   D  |
+/*  --------------------------------------------------------------------------------
+    | PID | Prioridade | Tempo de Início | Duração |  IO  | Início IO | Duração IO |
+    --------------------------------------------------------------------------------
+    |  1  |      0     |        0        |    5    |   D  |     2     |     4      |
     */
 
 int main(int argc, char *argv[]) {
