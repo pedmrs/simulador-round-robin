@@ -95,11 +95,14 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
             processo_executando = seleciona_processo_para_execucao();
         }
         // Caso o processo em execução já tenha esgotado seu time slice, seleciona um novo processo para execução
+        // e o processo preemptado vai para a fila de baixa prioridade.
         else if(tempo_execucao_corrente >= quantum)
-        {
+        {   
+            enfileira_processo(processo_executando, &fila_baixa_prioridade);
             processo_executando = seleciona_processo_para_execucao();
         } 
-        else 
+        else
+        // Caso nenhum processo novo seja colocado em execução o processo corrente continua executando 
         {
             tempo_execucao_corrente++;
         }
@@ -115,7 +118,10 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
                 enfileira_processo(&processo_itr, &fila_alta_prioridade);
             } 
 
-
+            // TO DO: 
+            //      * Colocar evento em espera quando pede um evento de IO
+            //      * Mover processos na fila de IO para fila de prontos 
+            //      * 
 
             
             
