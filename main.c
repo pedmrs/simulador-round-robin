@@ -4,7 +4,8 @@
 #include <time.h>
 #include "fila.h"
 
-Processo *lista_processos, *fila_baixa_prioridade, *fila_alta_prioridade, *fila_io, *lista_prontos;
+Processo *lista_processos;
+FilaProcessos  fila_baixa_prioridade, fila_alta_prioridade, fila_io;
 
 unsigned tempo_corrente = 0; // tempot total de execução da simulação
 
@@ -59,56 +60,60 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
 {
     int i = 0;
 
-    fila_alta_prioridade = (Processo *)malloc(sizeof(Processo) * quantidade_processos);
-    fila_baixa_prioridade = (Processo *)malloc(sizeof(Processo) * quantidade_processos);
-    fila_io = (Processo *)malloc(sizeof(Processo) * quantidade_processos);
+    inicia_fila(&fila_alta_prioridade, quantidade_processos);
+    inicia_fila(&fila_baixa_prioridade, quantidade_processos);
+    inicia_fila(&fila_io, quantidade_processos);
+
+    // fila_alta_prioridade = (Processo *)malloc(sizeof(Processo) * quantidade_processos);
+    // fila_baixa_prioridade = (Processo *)malloc(sizeof(Processo) * quantidade_processos);
+    // fila_io = (Processo *)malloc(sizeof(Processo) * quantidade_processos);
 
     while (1)
     {
-        while (i < quantidade_processos)
-        {
-            if (lista_processos[i].prioridade > 1)
-            {
-                fila_alta_prioridade[i] = lista_processos[i];
-                if (lista_processos[i].io.tipo != '\0')
-                {
-                    fila_io[i] = lista_processos[i];
-                }
-            }
-            else
-            {
-                fila_baixa_prioridade[i] = lista_processos[i];
-            }
+    //     while (i < quantidade_processos)
+    //     {
+    //         if (lista_processos[i].prioridade > 1)
+    //         {
+    //             fila_alta_prioridade[i] = lista_processos[i];
+    //             if (lista_processos[i].io.tipo != '\0')
+    //             {
+    //                 fila_io[i] = lista_processos[i];
+    //             }
+    //         }
+    //         else
+    //         {
+    //             fila_baixa_prioridade[i] = lista_processos[i];
+    //         }
 
-            if (lista_processos[i].inicio <= tempo_corrente)
-            {
-                if (lista_processos[i].duracao_restante > 0)
-                {
-                    if (lista_processos[i].duracao_restante <= quantum)
-                    { // processo sem preempção
-                        lista_processos[i].duracao_restante = 0;
-                        tempo_corrente += lista_processos[i].duracao_restante;
-                    }
-                    else
-                    {
-                        lista_processos[i].duracao_restante -= quantum;
-                        if (lista_processos[i].io.tipo == 'D')
-                        {
-                            fila_baixa_prioridade[i] = lista_processos[i];
-                        }
-                        else
-                        {
-                            fila_alta_prioridade[i] = lista_processos[i];
-                        }
+    //         if (lista_processos[i].inicio <= tempo_corrente)
+    //         {
+    //             if (lista_processos[i].duracao_restante > 0)
+    //             {
+    //                 if (lista_processos[i].duracao_restante <= quantum)
+    //                 { // processo sem preempção
+    //                     lista_processos[i].duracao_restante = 0;
+    //                     tempo_corrente += lista_processos[i].duracao_restante;
+    //                 }
+    //                 else
+    //                 {
+    //                     lista_processos[i].duracao_restante -= quantum;
+    //                     if (lista_processos[i].io.tipo == 'D')
+    //                     {
+    //                         fila_baixa_prioridade[i] = lista_processos[i];
+    //                     }
+    //                     else
+    //                     {
+    //                         fila_alta_prioridade[i] = lista_processos[i];
+    //                     }
 
-                        tempo_corrente += quantum;
-                    }
-                }
-            }
+    //                     tempo_corrente += quantum;
+    //                 }
+    //             }
+    //         }
 
-            i++;
-        }
-        i = 0;
+    //         i++;
+    //     }
+    //     i = 0;
     }
 }
 
@@ -129,8 +134,7 @@ void imprime_tabela_processos(int qtd)
 
 void imprime_fila_processos(FilaProcessos fila){
     int i;
-    printf("%d\n", fila.processos[0]->pid);
-    for(i = fila.head; i < fila.num_processos; i++){
+    for(i = fila.head; i < fila.tail + 1; i++){
         
         printf("Processo: %d", fila.processos[i]->pid);
         if(i == fila.head)
@@ -140,11 +144,6 @@ void imprime_fila_processos(FilaProcessos fila){
         printf("\n");
     }
 }
-/*  --------------------------------------------------------------------------------
-    | PID | Prioridade | Tempo de Início | Duração |  IO  | Início IO | Duração IO |
-    --------------------------------------------------------------------------------
-    |  1  |      0     |        0        |    5    |   D  |     2     |     4      |
-    */
 
 int main(int argc, char *argv[])
 {
@@ -152,16 +151,19 @@ int main(int argc, char *argv[])
     imprime_tabela_processos(5);
 
     FilaProcessos fila_de_prontos;
-    inicia_fila(&fila_de_prontos);
+    inicia_fila(&fila_de_prontos, 5);
     int i;
     for(i = 0; i < 5; i++){
         enfileira_processo(&lista_processos[i], &fila_de_prontos);  
     }
 
-    for(i = 0; i < fila_de_prontos.num_processos; i++){
-        printf("%d\n", fila_de_prontos.processos[i]->pid);
-    }
-    //imprime_fila_processos(fila_de_prontos);
+    imprime_fila_processos(fila_de_prontos);
 
+    desenfileira_processo(&fila_de_prontos);
+    printf("\n");
+    desenfileira_processo(&fila_de_prontos);
+
+    
+    imprime_fila_processos(fila_de_prontos);
     return 0;
 }

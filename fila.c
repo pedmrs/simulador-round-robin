@@ -1,9 +1,10 @@
 #include "fila.h"
 
-void inicia_fila(FilaProcessos* fila){
+void inicia_fila(FilaProcessos* fila, unsigned quantidade_processos){
     fila->head = 0 ;
     fila->tail = -1;
     fila->num_processos = 0;
+    fila->processos = (Processo **) malloc(quantidade_processos * sizeof(Processo *));
 }
 
 bool fila_cheia(FilaProcessos fila){
@@ -20,7 +21,6 @@ bool fila_vazia(FilaProcessos fila){
     return false;
 }
 
-
 bool enfileira_processo(Processo* processo_ptr, FilaProcessos* fila){
     if(fila_cheia(*fila))
         return false;
@@ -29,9 +29,9 @@ bool enfileira_processo(Processo* processo_ptr, FilaProcessos* fila){
     fila->tail++;
     fila->num_processos++;
 
-    printf("Processo %d entrando na posição %d\n", processo_ptr->pid, fila->tail);
+   
     fila->processos[fila->tail] = processo_ptr;
-    printf("fila->processos[fila->tail] = %d\n", fila->processos[fila->tail]->pid);
+ 
 
     return true;
 }
