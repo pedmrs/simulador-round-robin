@@ -5,7 +5,7 @@
 #include "fila.h"
 
 Processo *lista_processos;
-FilaProcessos  fila_baixa_prioridade, fila_alta_prioridade, fila_io;
+FilaProcessos  fila_baixa_prioridade, fila_alta_prioridade, fila_io_disco, fila_io_fita, fila_io_impressora;
 
 unsigned tempo_corrente = 0; // tempot total de execução da simulação
 
@@ -29,12 +29,37 @@ void criar_processos(int quantidade_processos)
     {
         lista_processos[i].pid = i + 1;
 
+        // Determina de maneira aleatória o instante de início e duração total de cada processo
+        lista_processos[i].inicio = rand() % MAX_INICIO;
+        lista_processos[i].duracao = (rand() % MAX_DURACAO) + 1;
+        lista_processos[i].tempo_executado = 0;
+
+        lista_processos[i].prioridade = 1; // define prioridade alta para todos os novos processos
+
         if (rand() % 2 == 0)
         { // atribui aleatoriamente se processo é IO ou não
             lista_processos[i].io.tipo = tipo_io[rand() % 3];
-            lista_processos[i].io.inicio = rand() % MAX_INICIO;
-            lista_processos[i].io.duracao = (rand() % MAX_DURACAO_IO) + 1;
-        }
+            lista_processos[i].io.inicio = rand() % lista_processos[i].duracao;
+            
+            switch (lista_processos[i].io.tipo)
+            {
+            case 'D':
+                lista_processos[i].io.duracao =  DURACAO_IO_DISCO;
+                break;
+            
+            case 'F':
+                lista_processos[i].io.duracao = DURACAO_IO_FITA;
+                break;
+            
+            case 'I':
+                lista_processos[i].io.duracao = DURACAO_IO_IMPRESSORA;
+                break;
+            
+            default:
+                break;
+            } 
+        }  
+
         else
         {
             lista_processos[i].io.tipo = '\0';
@@ -42,11 +67,7 @@ void criar_processos(int quantidade_processos)
             lista_processos[i].io.duracao = 0;
         }
 
-        // Determina de maneira aleatória o instante de início e duração total de cada processo
-        lista_processos[i].inicio = rand() % MAX_INICIO;
-        lista_processos[i].duracao_restante = (rand() % MAX_DURACAO) + 1;
 
-        lista_processos[i].prioridade = 1; // define prioridade alta para todos os novos processos
 
         //     Prioridade dos processos muda apenas quando ele retorna da operação de IO
         //     if (lista_processos[i].io.tipo == 'F' || lista_processos[i].io.tipo == 'I')
@@ -71,6 +92,74 @@ Processo* seleciona_processo_para_execucao()
     return NULL;
 }
 
+void comeca_io_de_processo(Processo* processo)
+{
+    switch (processo->io.tipo)
+    {
+    case 'D':
+        enfileira_processo(processo, &fila_io_disco);
+        break;
+
+    case 'F':
+        enfileira_processo(processo, &fila_io_fita);
+        break;
+
+    case 'I':
+        enfileira_processo(processo, &fila_io_impressora);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void termina_io_de_processo(Processo* processo)
+{   
+    Processo* primeiro_io;
+    switch(processo->io.tipo){
+        case 'D':
+            primeiro_io = primeiro_da_fila(fila_io_disco);
+            if(processo->pid == primeiro_io->pid){
+                if(primeiro_io->io.duracao == 0){
+                    desenfileira_processo(&fila_io_disco);
+                    enfileira_processo(processo, &fila_baixa_prioridade);
+                }
+            }
+            break;
+        
+        case 'F':
+            primeiro_io = primeiro_da_fila(fila_io_fita);
+            if(processo->pid == primeiro_io->pid){
+                if(primeiro_io->io.duracao == 0){
+                    desenfileira_processo(&fila_io_fita);
+                    enfileira_processo(processo, &fila_alta_prioridade);
+                }
+            }
+            break;
+        
+        case 'I':
+            primeiro_io = primeiro_da_fila(fila_io_impressora);
+            if(processo->pid == primeiro_io->pid){
+                if(primeiro_io->io.duracao == 0){
+                    desenfileira_processo(&fila_io_impressora);
+                    enfileira_processo(processo, &fila_alta_prioridade);
+                }
+            }
+            break;
+        
+        default:
+            break;
+    }
+}
+
+void decrementa_duracao_io(FilaProcessos fila_io){
+    for(int i = 0; i < fila_io.num_processos; i++){
+        if(fila_io.processos[i]->io.duracao > 0){
+            fila_io.processos[i]->io.duracao--;
+        }
+    }
+}
+
 void round_robin(unsigned quantum, unsigned quantidade_processos)
 {
     int i = 0;
@@ -79,7 +168,10 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
 
     inicia_fila(&fila_alta_prioridade, quantidade_processos);
     inicia_fila(&fila_baixa_prioridade, quantidade_processos);
-    inicia_fila(&fila_io, quantidade_processos);
+    inicia_fila(&fila_io_disco, quantidade_processos);
+    inicia_fila(&fila_io_impressora, quantidade_processos);
+    inicia_fila(&fila_io_fita, quantidade_processos);
+
 
     // fila_alta_prioridade = (Processo *)malloc(sizeof(Processo) * quantidade_processos);
     // fila_baixa_prioridade = (Processo *)malloc(sizeof(Processo) * quantidade_processos);
@@ -94,6 +186,7 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
         {
             processo_executando = seleciona_processo_para_execucao();
         }
+
         // Caso o processo em execução já tenha esgotado seu time slice, seleciona um novo processo para execução
         // e o processo preemptado vai para a fila de baixa prioridade.
         else if(tempo_execucao_corrente >= quantum)
@@ -103,38 +196,63 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
         } 
         else
         // Caso nenhum processo novo seja colocado em execução o processo corrente continua executando 
-        {
+        {   
+            // Incrementa o quanto do processo já executou
+            processo_executando->tempo_executado++;
+            
+            // Caso o processo já tenha executado toda sua duração, ele é movido para a saída e o próximo processo é selecionado.
+            if(processo_executando->tempo_executado == processo_executando->duracao)
+            {
+                processo_executando = seleciona_processo_para_execucao();
+            }
+
+            // Testa se o processo atual executa I/O
+            if(processo_executando->io.tipo != '\0')
+            {   
+                // Testa se é o instante no qual a operação de I/O é chamada
+                if(processo_executando->tempo_executado == processo_executando->io.inicio)
+                {
+                    comeca_io_de_processo(processo_executando);
+                    processo_executando = seleciona_processo_para_execucao();
+                }
+            }
+            
+            
             tempo_execucao_corrente++;
         }
 
+        // Adiciona cada processo em sua devida fila
         while(i < quantidade_processos)
         {   
-            Processo processo_itr = lista_processos[i];
+            Processo processo_atual = lista_processos[i];
             
 
             // Todos os processos são iniciados com alta prioridade
-            if(processo_itr.inicio == tempo_corrente)
+            if(processo_atual.inicio == tempo_corrente)
             {
-                enfileira_processo(&processo_itr, &fila_alta_prioridade);
+                enfileira_processo(&processo_atual, &fila_alta_prioridade);
             } 
-
+            
+            if(processo_atual.io.tipo)
+            {
+                termina_io_de_processo(&processo_atual);
+            }
+            
             // TO DO: 
             //      * Colocar evento em espera quando pede um evento de IO
             //      * Mover processos na fila de IO para fila de prontos 
             //      * Finalizar execução dos processos
 
-            
-            
-
-
-
             i++;
         
         }
         
-
-
         i = 0;
+
+        // Ao final de cada ciclo, reduz a duração da operação de IO para cada processo bloqueado.
+        decrementa_duracao_io(fila_io_disco);
+        decrementa_duracao_io(fila_io_fita);
+        decrementa_duracao_io(fila_io_impressora);
         tempo_corrente++;
     }
     //     while (i < quantidade_processos)
@@ -192,9 +310,9 @@ void imprime_tabela_processos(int qtd)
     int i = 0;
     for (i = 0; i < qtd; i++)
     {
-        Processo processo_atual = lista_processos[i];
+        Processo _p = lista_processos[i];
         printf("|  %d  |      %d     |        %d        |    %d    |   %c  |     %d     |    %d     |\n",
-               processo_atual.pid, processo_atual.prioridade, processo_atual.inicio, processo_atual.duracao_restante, processo_atual.io.tipo, processo_atual.io.inicio, processo_atual.io.duracao);
+               _p.pid, _p.prioridade, _p.inicio, _p.duracao, _p.io.tipo, _p.io.inicio, _p.io.duracao);
         printf("--------------------------------------------------------------------------------\n");
     }
 }

@@ -3,10 +3,13 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define MAX_PROCESSOS 10  // número máximo de processos
-#define MAX_INICIO 20     // limite máximo para inicio de processo
-#define MAX_DURACAO 29    // limite máximo para duração de processo
-#define MAX_DURACAO_IO 14 // limite máximo para duração de operação de I/O
+#define MAX_PROCESSOS 10        // número máximo de processos
+#define MAX_INICIO 20           // limite máximo para inicio de processo
+#define MAX_DURACAO 29          // limite máximo para duração de processo
+#define DURACAO_IO_DISCO 3      // limite máximo para duração de operação de I/O em disco
+#define DURACAO_IO_FITA 4       // limite máximo para duração de operação de I/O em fita magnética
+#define DURACAO_IO_IMPRESSORA 5 // limite máximo para duração de operação de I/O em impressora
+
 
 typedef struct
 {
@@ -20,6 +23,7 @@ typedef struct
     unsigned pid;
     unsigned prioridade;
     unsigned inicio;
-    unsigned duracao_restante;
+    unsigned duracao;
+    unsigned tempo_executado;
     IO io;
 } Processo;
