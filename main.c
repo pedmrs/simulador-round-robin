@@ -5,7 +5,7 @@
 #include "fila.h"
 
 Processo *lista_processos;
-FilaProcessos fila_baixa_prioridade, fila_alta_prioridade, fila_io_disco, fila_io_fita, fila_io_impressora;
+FilaProcessos fila_baixa_prioridade, fila_alta_prioridade, fila_io_disco, fila_io_fita, fila_io_impressora, fila_concluidos;
 
 unsigned tempo_corrente = 0; // tempo total de execução da simulação
 unsigned qtd_processos_finalizados = 0; // quantidade de processos finalizados
@@ -41,6 +41,7 @@ void criar_processos(int quantidade_processos)
     fila_io_disco = *(FilaProcessos *)malloc(sizeof(FilaProcessos) * quantidade_processos);
     fila_io_fita = *(FilaProcessos *)malloc(sizeof(FilaProcessos) * quantidade_processos);
     fila_io_impressora = *(FilaProcessos *)malloc(sizeof(FilaProcessos) * quantidade_processos);
+    fila_concluidos = *(FilaProcessos *)malloc(sizeof(FilaProcessos) * quantidade_processos);
 
     srand(time(NULL));
 
@@ -227,6 +228,7 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
     inicia_fila(&fila_io_disco, quantidade_processos);
     inicia_fila(&fila_io_impressora, quantidade_processos);
     inicia_fila(&fila_io_fita, quantidade_processos);
+    inicia_fila(&fila_concluidos, quantidade_processos);
 
     // Numero mágico para testar impressão. Precisa definir condições de término do programa
     while (qtd_processos_finalizados < MAX_PROCESSOS)
@@ -290,7 +292,9 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
             {
                 printf("Processo %d finalizado\n", processo_executando->pid);
                 processo_executando->status = "CONCLUIDO";
+                enfileira_processo(processo_executando, &fila_concluidos);
                 processo_executando = seleciona_processo_para_execucao();
+                printf("Novo processo selecionado: %d\n", processo_executando->pid);
                 qtd_processos_finalizados++;
             }
             else if (processo_executando->tempo_executado > processo_executando->duracao)
@@ -328,50 +332,6 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
         decrementa_duracao_io(fila_io_impressora);
         tempo_corrente++;
     }
-    //     while (i < quantidade_processos)
-    //     {
-    //         if (lista_processos[i].prioridade > 1)
-    //         {
-    //             fila_alta_prioridade[i] = lista_processos[i];
-    //             if (lista_processos[i].io.tipo != '\0')
-    //             {
-    //                 fila_io[i] = lista_processos[i];
-    //             }
-    //         }
-    //         else
-    //         {
-    //             fila_baixa_prioridade[i] = lista_processos[i];
-    //         }
-
-    //         if (lista_processos[i].inicio <= tempo_corrente)
-    //         {
-    //             if (lista_processos[i].duracao_restante > 0)
-    //             {
-    //                 if (lista_processos[i].duracao_restante <= quantum)
-    //                 { // processo sem preempção
-    //                     lista_processos[i].duracao_restante = 0;
-    //                     tempo_corrente += lista_processos[i].duracao_restante;
-    //                 }
-    //                 else
-    //                 {
-    //                     lista_processos[i].duracao_restante -= quantum;
-    //                     if (lista_processos[i].io.tipo == 'D')
-    //                     {
-    //                         fila_baixa_prioridade[i] = lista_processos[i];
-    //                     }
-    //                     else
-    //                     {
-    //                         fila_alta_prioridade[i] = lista_processos[i];
-    //                     }
-
-    //                     tempo_corrente += quantum;
-    //                 }
-    //             }
-    //         }
-
-    //         i++;
-    //     }
-    //     i = 0;
 }
 void imprime_tabela_processos(int qtd)
 {
