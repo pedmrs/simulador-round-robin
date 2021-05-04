@@ -150,6 +150,7 @@ void termina_io_de_processo(Processo *processo)
                 {
                     printf("Processo PID=%d terminou sua operação de I/O em disco\n", primeiro_io->pid);
                     desenfileira_processo(&fila_io_disco);
+                    primeiro_io->io.tipo = '\0';
                     enfileira_processo(processo, &fila_baixa_prioridade);
                 }
             }
@@ -166,6 +167,7 @@ void termina_io_de_processo(Processo *processo)
                 {
                     printf("Processo PID=%d terminou sua operação de I/O em fita magnética\n", primeiro_io->pid);
                     desenfileira_processo(&fila_io_fita);
+                    primeiro_io->io.tipo = '\0';
                     enfileira_processo(processo, &fila_alta_prioridade);
                 }
             }
@@ -182,6 +184,7 @@ void termina_io_de_processo(Processo *processo)
                 {
                     printf("Processo PID=%d terminou sua operação de I/O em impressora\n", primeiro_io->pid);
                     desenfileira_processo(&fila_io_impressora);
+                    primeiro_io->io.tipo = '\0';
                     enfileira_processo(processo, &fila_alta_prioridade);
                 }
             }
@@ -254,10 +257,6 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
                 termina_io_de_processo(processo_atual);
             }
 
-            // TO DO:
-            //      * Finalizar execução dos processos
-            //      * Contar quantidade de processos finalizados (criterio de parada)
-
             i++;
         }
 
@@ -270,88 +269,104 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
             imprime_filas_prioridade();
             processo_executando = seleciona_processo_para_execucao();
             tempo_execucao_corrente = 0;
-            if(processo_executando)
-            {
-                processo_executando->tempo_executado++;
-                tempo_execucao_corrente++;
-            }
-            else
-                printf("Não há processo em execução\n");
+            // if(processo_executando)
+            // {
+                // processo_executando->tempo_executado++;
+                // tempo_execucao_corrente++;
+            // }
+            // else
+                // printf("Não há processo em execução\n");
         }
 
         // Caso nenhum processo novo seja colocado em execução o processo corrente continua executando
-        else
+        else if (processo_executando->tempo_executado == processo_executando->duracao)
         {
             // Caso o processo já tenha executado toda sua duração, ele é movido para a saída e o próximo processo é selecionado.
-            if (processo_executando->tempo_executado == processo_executando->duracao)
-            {
-                printf("Processo %d finalizado\n", processo_executando->pid);
-                processo_executando->status = "CONCLUIDO";
-                enfileira_processo(processo_executando, &fila_concluidos);
-                qtd_processos_finalizados++;
-                if(qtd_processos_finalizados == quantidade_processos)
-                {
-                    printf("Todos os processos finalizados.\n");
-                    exit(-1);
-                }
+            printf("Processo %d finalizado\n", processo_executando->pid);
+            processo_executando->status = "CONCLUIDO";
+            enfileira_processo(processo_executando, &fila_concluidos);
+            qtd_processos_finalizados++;
 
-                if(fila_vazia(fila_alta_prioridade) == false || fila_vazia(fila_baixa_prioridade) == false)
-                {
-                    processo_executando = seleciona_processo_para_execucao();
-                    printf("Novo processo selecionado: %d\n", processo_executando->pid);
-                    tempo_execucao_corrente = 0;
-                }
-                else
-                {
-                    printf("Não há processo nas listas de prontos. Esperando processos bloqueados por I/O.\n");
-                } 
-            }
-            // Caso o processo em execução já tenha esgotado seu time slice, seleciona um novo processo para execução
-            // e o processo preemptado vai para a fila de baixa prioridade.
-            else if (tempo_execucao_corrente >= quantum)
+            // Se todos os processo da foram concluídos, a simulação é encerrada
+            if(qtd_processos_finalizados == quantidade_processos)
             {
-                printf("Tempo de execucao do processo %d atingiu valor do quantum(%d)\n", processo_executando->pid, quantum);
-                enfileira_processo(processo_executando, &fila_baixa_prioridade);
-                processo_executando = seleciona_processo_para_execucao();
-                printf("Novo processo selecionado: %d\n", processo_executando->pid);
-                tempo_execucao_corrente = 0;
-            }
-            
-            else if (processo_executando->tempo_executado > processo_executando->duracao)
-            {
-                printf("ERRO: O tempo de execução do processo %d é maior que a duração máxima\n\tTempo Executado: %d | Duracao: %d\n", processo_executando->pid, processo_executando->tempo_executado, processo_executando->duracao);
+                printf("Todos os processos finalizados.\n");
                 exit(-1);
             }
 
-            // Testa se o processo atual executa I/O
-            if (processo_executando->io.tipo != '\0')
-            {
-                //Testa se é o instante no qual a operação de I/O é chamada
-                if (processo_executando->tempo_executado == processo_executando->io.inicio)
-                {
-                    comeca_io_de_processo(processo_executando);
-                    processo_executando = seleciona_processo_para_execucao();
-                    tempo_execucao_corrente = 0;
-                }
-            }
+            // Se houver outro processo em alguma das filas de pronto ele é executado, se não continua aguardando.
+            processo_executando = seleciona_processo_para_execucao();
             if(processo_executando)
             {
-                processo_executando->tempo_executado++;
-                tempo_execucao_corrente++;
+                printf("Novo processo selecionado: %d\n", processo_executando->pid);
+                tempo_execucao_corrente = 0;
             }
-            else 
+            else
             {
-                printf("Não há processos nas listas de prontos. Aguardando. \n");   
+                printf("Não há processo nas listas de prontos. Aguardando.\n");
+            } 
+        }  
+
+        // Caso o processo em execução tenha alguma operação de IO para realizar, testa se é o instante de início da mesma.
+        else if (processo_executando->io.tipo != '\0')
+        {
+            if (processo_executando->tempo_executado == processo_executando->io.inicio)
+            {
+                comeca_io_de_processo(processo_executando);
+                processo_executando = seleciona_processo_para_execucao();
+                tempo_execucao_corrente = 0;
             }
         }
+            
 
-        i = 0;
+        // Caso o processo em execução já tenha esgotado seu time slice, seleciona um novo processo para execução
+        // e o processo preemptado vai para a fila de baixa prioridade.
+        else if (processo_executando->tempo_executado > processo_executando->duracao)
+        {
+            printf("ERRO: O tempo de execução do processo %d é maior que a duração máxima\n\tTempo Executado: %d | Duracao: %d\n", processo_executando->pid, processo_executando->tempo_executado, processo_executando->duracao);
+            exit(-1);
+        }
 
+        if(processo_executando)
+        {
+            processo_executando->tempo_executado++;
+            tempo_execucao_corrente++;
+        }
+        else 
+        {
+            printf("Não há processos nas listas de prontos. Aguardando. \n");   
+        }
+    
         if (processo_executando && tempo_execucao_corrente)
         {
             printf("Processo PID=%d está executando | Tempo de execução corrente: %d | Tempo total executado: %d\n", processo_executando->pid, tempo_execucao_corrente, processo_executando->tempo_executado);
+            if (tempo_execucao_corrente >= quantum)
+            {
+                printf("Tempo de execucao do processo %d atingiu valor do quantum(%d)\n", processo_executando->pid, quantum);
+                if(fila_vazia(fila_alta_prioridade) || fila_vazia(fila_baixa_prioridade))
+                {
+                    printf("Não há processos prontos para receber prioridade. Continuando execução do processo PID = %d", processo_executando->pid);
+                }
+                else
+                {    
+                    enfileira_processo(processo_executando, &fila_baixa_prioridade);
+                    processo_executando = seleciona_processo_para_execucao();
+                    tempo_execucao_corrente = 0;
+                    if(processo_executando)
+                    {
+                        printf("Novo processo selecionado: %d\n", processo_executando->pid);
+                        processo_executando->tempo_executado++;
+                        tempo_execucao_corrente++;
+                    }
+                    else 
+                    {
+                        printf("Não há processos nas listas de prontos. Aguardando. \n");   
+                    }
+                }    
+            }
         }
         
+        i = 0;
         imprime_filas_prioridade();
 
         // Ao final de cada ciclo, reduz a duração da operação de IO para cada processo bloqueado.
