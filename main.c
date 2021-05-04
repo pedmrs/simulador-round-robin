@@ -260,20 +260,11 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
             i++;
         }
 
-        // Confere se há um processo nas filas de pronto que pode ser executado
-        if (!processo_executando)
-        {
-            printf("Não há processo em execução\n");
-            imprime_filas_prioridade();
-            processo_executando = seleciona_processo_para_execucao();
-            tempo_execucao_corrente = 0;
-        }
-
         // Caso o processo em execução já tenha esgotado seu time slice, seleciona um novo processo para execução
         // e o processo preemptado vai para a fila de baixa prioridade.
-        else if (tempo_execucao_corrente >= quantum)
+        if (tempo_execucao_corrente >= quantum)
         {
-            printf("Tempo de execucao do processo %d maior que quantum\n", processo_executando->pid);
+            printf("Tempo de execucao do processo %d atingiu valor do quantum(%d)\n", processo_executando->pid, quantum);
             enfileira_processo(processo_executando, &fila_baixa_prioridade);
             processo_executando = seleciona_processo_para_execucao();
             printf("Novo processo selecionado: %d\n", processo_executando->pid);
@@ -281,12 +272,18 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
             processo_executando->tempo_executado++;
         }
 
+        // Confere se há um processo nas filas de pronto que pode ser executado
+        else if (!processo_executando)
+        {
+            printf("Não há processo em execução\n");
+            imprime_filas_prioridade();
+            processo_executando = seleciona_processo_para_execucao();
+            tempo_execucao_corrente = 0;
+        }
+
         // Caso nenhum processo novo seja colocado em execução o processo corrente continua executando
         else
         {
-            // Incrementa o quanto do processo já executou
-            //processo_executando->tempo_executado++;
-
             // Caso o processo já tenha executado toda sua duração, ele é movido para a saída e o próximo processo é selecionado.
             if (processo_executando->tempo_executado == processo_executando->duracao)
             {
@@ -295,11 +292,12 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
                 enfileira_processo(processo_executando, &fila_concluidos);
                 processo_executando = seleciona_processo_para_execucao();
                 printf("Novo processo selecionado: %d\n", processo_executando->pid);
+                tempo_execucao_corrente = 0;
                 qtd_processos_finalizados++;
             }
             else if (processo_executando->tempo_executado > processo_executando->duracao)
             {
-                printf("ERRO: O tempo de execução do processo %d é maior que a duração máxima\n", processo_executando->pid);
+                printf("ERRO: O tempo de execução do processo %d é maior que a duração máxima\n\tTempo Executado: %d | Duracao: %d\n", processo_executando->pid, processo_executando->tempo_executado, processo_executando->duracao);
                 exit(-1);
             }
 
@@ -311,6 +309,7 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
                 {
                     comeca_io_de_processo(processo_executando);
                     processo_executando = seleciona_processo_para_execucao();
+                    tempo_execucao_corrente = 0;
                 }
             }
             processo_executando->tempo_executado++;
@@ -321,7 +320,7 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
 
         if (processo_executando && tempo_execucao_corrente)
         {
-            printf("Processo PID=%d está executando | Tempo de execução: %d\n", processo_executando->pid, tempo_execucao_corrente);
+            printf("Processo PID=%d está executando | Tempo de execução corrente: %d | Tempo total executado: %d\n", processo_executando->pid, tempo_execucao_corrente, processo_executando->tempo_executado);
         }
         
         imprime_filas_prioridade();
@@ -331,6 +330,7 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
         decrementa_duracao_io(fila_io_fita);
         decrementa_duracao_io(fila_io_impressora);
         tempo_corrente++;
+        printf("Processos concluidos: %d\n", qtd_processos_finalizados);
     }
 }
 void imprime_tabela_processos(int qtd)
