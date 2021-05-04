@@ -231,7 +231,8 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
     inicia_fila(&fila_concluidos, quantidade_processos);
 
     // Numero mágico para testar impressão. Precisa definir condições de término do programa
-    while (qtd_processos_finalizados < MAX_PROCESSOS)
+    //while (qtd_processos_finalizados < MAX_PROCESSOS)
+    while (1)
     {
         printf("\nInstante t = %d\n", tempo_corrente);
 
@@ -260,20 +261,10 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
             i++;
         }
 
-        // Caso o processo em execução já tenha esgotado seu time slice, seleciona um novo processo para execução
-        // e o processo preemptado vai para a fila de baixa prioridade.
-        if (tempo_execucao_corrente >= quantum)
-        {
-            printf("Tempo de execucao do processo %d atingiu valor do quantum(%d)\n", processo_executando->pid, quantum);
-            enfileira_processo(processo_executando, &fila_baixa_prioridade);
-            processo_executando = seleciona_processo_para_execucao();
-            printf("Novo processo selecionado: %d\n", processo_executando->pid);
-            tempo_execucao_corrente = 1;
-            processo_executando->tempo_executado++;
-        }
+        
 
         // Confere se há um processo nas filas de pronto que pode ser executado
-        else if (!processo_executando)
+        if (!processo_executando)
         {
             printf("Não há processo em execução\n");
             imprime_filas_prioridade();
@@ -290,11 +281,27 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
                 printf("Processo %d finalizado\n", processo_executando->pid);
                 processo_executando->status = "CONCLUIDO";
                 enfileira_processo(processo_executando, &fila_concluidos);
+                qtd_processos_finalizados++;
+                if(qtd_processos_finalizados == quantidade_processos)
+                {
+                    printf("Todos os processos finalizados.\n");
+                    exit(-1);
+                }
                 processo_executando = seleciona_processo_para_execucao();
                 printf("Novo processo selecionado: %d\n", processo_executando->pid);
                 tempo_execucao_corrente = 0;
-                qtd_processos_finalizados++;
             }
+            // Caso o processo em execução já tenha esgotado seu time slice, seleciona um novo processo para execução
+            // e o processo preemptado vai para a fila de baixa prioridade.
+            else if (tempo_execucao_corrente >= quantum)
+            {
+                printf("Tempo de execucao do processo %d atingiu valor do quantum(%d)\n", processo_executando->pid, quantum);
+                enfileira_processo(processo_executando, &fila_baixa_prioridade);
+                processo_executando = seleciona_processo_para_execucao();
+                printf("Novo processo selecionado: %d\n", processo_executando->pid);
+                tempo_execucao_corrente = 0;
+            }
+            
             else if (processo_executando->tempo_executado > processo_executando->duracao)
             {
                 printf("ERRO: O tempo de execução do processo %d é maior que a duração máxima\n\tTempo Executado: %d | Duracao: %d\n", processo_executando->pid, processo_executando->tempo_executado, processo_executando->duracao);
