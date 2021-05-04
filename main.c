@@ -238,7 +238,7 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
 
         // Adiciona cada processo em sua devida fila
         while (i < quantidade_processos)
-        {
+        {   
             Processo *processo_atual = &lista_processos[i];
 
             // Todos os processos são iniciados com alta prioridade
@@ -266,10 +266,17 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
         // Confere se há um processo nas filas de pronto que pode ser executado
         if (!processo_executando)
         {
-            printf("Não há processo em execução\n");
+            
             imprime_filas_prioridade();
             processo_executando = seleciona_processo_para_execucao();
             tempo_execucao_corrente = 0;
+            if(processo_executando)
+            {
+                processo_executando->tempo_executado++;
+                tempo_execucao_corrente++;
+            }
+            else
+                printf("Não há processo em execução\n");
         }
 
         // Caso nenhum processo novo seja colocado em execução o processo corrente continua executando
@@ -287,9 +294,17 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
                     printf("Todos os processos finalizados.\n");
                     exit(-1);
                 }
-                processo_executando = seleciona_processo_para_execucao();
-                printf("Novo processo selecionado: %d\n", processo_executando->pid);
-                tempo_execucao_corrente = 0;
+
+                if(fila_vazia(fila_alta_prioridade) == false || fila_vazia(fila_baixa_prioridade) == false)
+                {
+                    processo_executando = seleciona_processo_para_execucao();
+                    printf("Novo processo selecionado: %d\n", processo_executando->pid);
+                    tempo_execucao_corrente = 0;
+                }
+                else
+                {
+                    printf("Não há processo nas listas de prontos. Esperando processos bloqueados por I/O.\n");
+                } 
             }
             // Caso o processo em execução já tenha esgotado seu time slice, seleciona um novo processo para execução
             // e o processo preemptado vai para a fila de baixa prioridade.
@@ -319,8 +334,15 @@ void round_robin(unsigned quantum, unsigned quantidade_processos)
                     tempo_execucao_corrente = 0;
                 }
             }
-            processo_executando->tempo_executado++;
-            tempo_execucao_corrente++;
+            if(processo_executando)
+            {
+                processo_executando->tempo_executado++;
+                tempo_execucao_corrente++;
+            }
+            else 
+            {
+                printf("Não há processos nas listas de prontos. Aguardando. \n");   
+            }
         }
 
         i = 0;
@@ -357,10 +379,10 @@ void imprime_tabela_processos(int qtd)
 
 int main(int argc, char *argv[])
 {
-    criar_processos(3);
-    imprime_tabela_processos(3);
+    criar_processos(5);
+    imprime_tabela_processos(5);
 
-    round_robin(3, 3);
+    round_robin(5, 5);
     printf("Fila de alta prioridade:\n");
     imprime_fila_processos(fila_alta_prioridade);
     return 0;
